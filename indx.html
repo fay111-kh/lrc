@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ar" dir="rtl" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سجل الحجز الإلكتروني</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', sans-serif; }
+    .gradient-bg {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+    .card-gradient {
+      background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    }
+    .gold-accent { color: #ffffff; }
+    .gold-border { border-color: #ffffff; }
+    .gold-bg { background-color: #ffffff; }
+    .period-cell {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .period-cell:hover:not(.booked) {
+      transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+    }
+    .period-cell.booked {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      cursor: not-allowed;
+    }
+    .period-cell.available {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      border: 1px solid #16a34a;
+    }
+    .day-header {
+      background-color: #1e40af;
+      color: white;
+    }
+    .period-header {
+      background-color: #d1d5db;
+      color: #111827;
+    }
+    .modal-overlay {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+    }
+    .shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    select, input, textarea {
+      background-color: #ffffff;
+      border: 1px solid #0ea5e9;
+      color: #1e3a8a;
+    }
+    select option {
+      background-color: #ffffff;
+      color: #1e3a8a;
+    }
+    .toast {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-blue-100 text-gray-900 overflow-auto">
+  <div id="app" class="min-h-full w-full">
+   <!-- Header -->
+   <header class="py-6 px-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl p-6 shadow-lg">
+     <div class="flex justify-center mb-4">
+      <div class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center shadow-lg">
+       <svg class="w-12 h-12 text-blue-600" fill="currentColor" viewbox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+       </svg>
+      </div>
+     </div>
+     <h1 id="mainTitle" class="text-2xl md:text-3xl font-bold text-blue-900 mb-4 text-center">سجل الحجز الإلكتروني</h1>
+     <div class="space-y-2 text-center">
+      <h2 id="schoolName" class="text-lg md:text-xl text-blue-800 font-semibold">مدرسة مرفع دارس (6-10)</h2>
+      <p id="specialistName" class="text-sm md:text-base text-blue-700">الأستاذة: هناء الكميانية</p>
+     </div>
+    </div>
+   </header><!-- Week Navigation -->
+   <div class="py-6 px-4">
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl p-6 shadow-lg">
+     <div class="flex items-center justify-center gap-32 flex-wrap mb-4">
+      <button id="nextWeek" class="px-4 py-2 rounded-lg bg-blue-900 text-white font-bold hover:bg-blue-950 transition flex items-center gap-2"> الأسبوع القادم 
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+       </svg></button>
+      <div class="text-center px-6 py-3 bg-blue-50 rounded-lg min-w-[250px]">
+       <p class="text-sm text-blue-600 mb-1">الأسبوع الحالي</p>
+       <p id="weekRange" class="text-lg font-bold text-blue-900"></p>
+      </div><button id="prevWeek" class="px-4 py-2 rounded-lg bg-blue-900 text-white font-bold hover:bg-blue-950 transition flex items-center gap-2">
+       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+       </svg> الأسبوع السابق </button>
+     </div>
+     <div class="flex justify-center">
+      <button id="todayBtn" class="px-6 py-2 rounded-lg bg-blue-900 text-white font-bold hover:bg-blue-950 transition"> العودة لليوم الحالي </button>
+     </div>
+    </div>
+   </div><!-- Schedule Table -->
+   <div class="px-4 pb-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl p-6 shadow-lg overflow-x-auto">
+     <table class="w-full border-collapse min-w-[800px]">
+      <thead>
+       <tr>
+        <th class="p-3 period-header font-bold rounded-tr-lg">الحصة</th>
+        <th id="day0" class="p-3 day-header font-bold">الأحد</th>
+        <th id="day1" class="p-3 day-header font-bold">الإثنين</th>
+        <th id="day2" class="p-3 day-header font-bold">الثلاثاء</th>
+        <th id="day3" class="p-3 day-header font-bold">الأربعاء</th>
+        <th id="day4" class="p-3 day-header font-bold rounded-tl-lg">الخميس</th>
+       </tr>
+      </thead>
+      <tbody id="scheduleBody">
+      </tbody>
+     </table>
+    </div>
+   </div><!-- Bookings Summary -->
+   <div class="px-4 pb-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl p-6 shadow-lg">
+     <h3 class="text-lg font-bold text-blue-900 mb-4">📋 الحجوزات الموجودة</h3>
+     <div id="bookingsSummary" class="space-y-3 max-h-96 overflow-y-auto">
+      <div class="text-center p-4 bg-blue-50 rounded-lg">
+       <p class="text-sm text-blue-600">جاري تحميل الحجوزات...</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Legend -->
+   <div class="px-4 pb-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl p-6 shadow-lg">
+     <div class="flex justify-center gap-6 flex-wrap text-sm">
+      <div class="flex items-center gap-2">
+       <div class="w-6 h-6 rounded bg-green-500"></div><span class="text-gray-700">متاح للحجز</span>
+      </div>
+      <div class="flex items-center gap-2">
+       <div class="w-6 h-6 rounded bg-red-600"></div><span class="text-gray-700">محجوز</span>
+      </div>
+     </div>
+    </div><!-- Booking Modal -->
+    <div id="bookingModal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+     <div class="bg-white rounded-2xl max-w-md w-full max-h-[90%] overflow-y-auto border-2 border-blue-500 shadow-2xl fade-in">
+      <div class="p-6">
+       <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-blue-900">نموذج الحجز</h3><button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+       </div>
+       <div id="selectedInfo" class="mb-4 p-3 rounded-lg bg-blue-50 text-sm">
+        <p id="selectedDay" class="text-blue-900 font-bold"></p>
+        <p id="selectedPeriod" class="text-blue-700"></p>
+       </div>
+       <form id="bookingForm" class="space-y-4">
+        <div>
+         <label class="block text-sm mb-1 text-blue-900">اسم المعلمة *</label> <input type="text" id="teacherName" required class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل اسم المعلمة">
+        </div>
+        <div>
+         <label class="block text-sm mb-1 text-blue-900">المادة / التخصص *</label> <select id="subject" required class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">اختر المادة أو التخصص</option> <optgroup label="المواد الدراسية"> <option value="تربية إسلامية">تربية إسلامية</option> <option value="دراسات اجتماعية">دراسات اجتماعية</option> <option value="رياضيات">رياضيات</option> <option value="علوم">علوم</option> <option value="لغة عربية">لغة عربية</option> <option value="لغة إنجليزية">لغة إنجليزية</option> <option value="فنون تشكيلية">فنون تشكيلية</option> <option value="رياضة مدرسية">رياضة مدرسية</option> <option value="مهارات موسيقية">مهارات موسيقية</option> <option value="مهارات حياتية">مهارات حياتية</option> <option value="تقنية معلومات">تقنية معلومات</option> </optgroup> <optgroup label="التخصصات الإدارية"> <option value="مديرة مدرسة">مديرة مدرسة</option> <option value="مساعدة مديرة">مساعدة مديرة</option> <option value="أخصائية مركز مصادر التعلم">أخصائية مركز مصادر التعلم</option> <option value="أخصائية التوجيه المهني">أخصائية التوجيه المهني</option> <option value="أخصائية الأنشطة">أخصائية الأنشطة</option> <option value="أخصائية اجتماعية">أخصائية اجتماعية</option> <option value="أخصائية قواعد بيانات">أخصائية قواعد بيانات</option> <option value="منسقة">منسقة</option> <option value="فنية مختبر">فنية مختبر</option> <option value="فنية حاسب آلي">فنية حاسب آلي</option> </optgroup> <option value="أخرى">أخرى</option> </select>
+        </div>
+        <div>
+         <label class="block text-sm mb-1 text-blue-900">عنوان الدرس *</label> <input type="text" id="lessonTitle" required class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="أدخل عنوان الدرس">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+         <div>
+          <label class="block text-sm mb-1 text-blue-900">الصف *</label> <select id="grade" required class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">اختر الصف</option> <option value="السادس">السادس</option> <option value="السابع">السابع</option> <option value="الثامن">الثامن</option> <option value="التاسع">التاسع</option> <option value="العاشر">العاشر</option> <option value="أخرى">أخرى</option> </select>
+         </div>
+         <div>
+          <label class="block text-sm mb-1 text-blue-900">الشعبة *</label> <select id="section" required class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">اختر الشعبة</option> <option value="1">1</option> <option value="2">2</option> <option value="3">3</option> <option value="4">4</option> <option value="5">5</option> <option value="6">6</option> <option value="7">7</option> <option value="8">8</option> <option value="9">9</option> <option value="10">10</option> <option value="أخرى">أخرى</option> </select>
+         </div>
+        </div>
+        <div>
+         <label class="block text-sm mb-1 text-blue-900">احتياجات من المركز</label> <textarea id="requirements" rows="3" class="w-full px-4 py-2 rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="حدد احتياجاتك من المركز (أجهزة، كتب، مصادر...)"></textarea>
+        </div><button type="submit" id="submitBtn" class="w-full py-3 rounded-lg bg-green-500 text-white font-bold text-lg hover:bg-green-600 transition"> تأكيد الحجز </button>
+       </form>
+      </div>
+     </div>
+    </div><!-- View Booking Modal -->
+    <div id="viewModal" class="fixed inset-0 modal-overlay z-50 hidden flex items-center justify-center p-4">
+     <div class="bg-white rounded-2xl max-w-md w-full max-h-[90%] overflow-y-auto border-2 border-red-500 shadow-2xl fade-in">
+      <div class="p-6">
+       <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-red-600">تفاصيل الحجز</h3><button id="closeViewModal" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+       </div>
+       <div id="bookingDetails" class="space-y-3">
+       </div>
+       <div id="deleteSection" class="mt-6 pt-4 border-t border-gray-300">
+        <button id="deleteBookingBtn" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition hidden"> إلغاء الحجز </button>
+        <div id="confirmDelete" class="hidden space-y-2">
+         <p class="text-center text-red-600 text-sm">هل أنت متأكد من إلغاء هذا الحجز؟</p>
+         <div class="flex gap-2">
+          <button id="confirmDeleteBtn" class="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold transition"> نعم، إلغاء </button> <button id="cancelDeleteBtn" class="flex-1 py-2 rounded-lg bg-gray-400 hover:bg-gray-500 text-white font-bold transition"> لا، إبقاء </button>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div><!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 left-4 z-50 space-y-2"></div>
+   </div>
+   <script>
+    const defaultConfig = {
+      main_title: 'سجل الحجز الإلكتروني لمركز مصادر التعلم',
+      school_name: 'مدرسة مرفع دارس (6-10)',
+      specialist_name: 'إعداد الأستاذة: هناء الكميانية - أخصائية مركز مصادر التعلم',
+      primary_color: '#d4af37',
+      secondary_color: '#1e3a5f',
+      text_color: '#ffffff',
+      font_family: 'Tajawal'
+    };
+
+    let bookings = [];
+    let currentWeekStart = getWeekStart(new Date());
+    let selectedSlot = null;
+    let currentViewingBooking = null;
+
+    const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    const periodNames = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة'];
+
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day;
+      return new Date(d.setDate(diff));
+    }
+
+    function formatDate(date) {
+      return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function formatShortDate(date) {
+      return date.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+    }
+
+    function getDateKey(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast px-4 py-3 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    function updateWeekDisplay() {
+      const weekEnd = new Date(currentWeekStart);
+      weekEnd.setDate(weekEnd.getDate() + 4);
+      document.getElementById('weekRange').textContent = 
+        `${formatDate(currentWeekStart)} - ${formatDate(weekEnd)}`;
+      
+      for (let i = 0; i < 5; i++) {
+        const dayDate = new Date(currentWeekStart);
+        dayDate.setDate(dayDate.getDate() + i);
+        const dayEl = document.getElementById(`day${i}`);
+        dayEl.innerHTML = `${dayNames[i]}<br><span class="text-xs font-normal">${formatShortDate(dayDate)}</span>`;
+      }
+    }
+
+    function getBookingForSlot(dateKey, dayIndex, period) {
+      return bookings.find(b => 
+        b.date === dateKey && 
+        b.day_index === dayIndex && 
+        b.period === period
+      );
+    }
+
+    function renderBookingsSummary() {
+      const container = document.getElementById('bookingsSummary');
+      
+      if (bookings.length === 0) {
+        container.innerHTML = `
+          <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-600">لا توجد حجوزات حتى الآن</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const sortedBookings = [...bookings].sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      container.innerHTML = sortedBookings.map(booking => {
+        const bookingDate = new Date(booking.date);
+        const dayName = dayNames[booking.day_index];
+        
+        return `
+          <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-r-4 border-blue-600 cursor-pointer hover:shadow-lg transition" onclick="viewBooking(${JSON.stringify(booking).replace(/"/g, '&quot;')})">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <p class="text-xs text-blue-600 font-semibold">📅 التاريخ</p>
+                <p class="text-sm text-gray-800 font-bold">${formatDate(bookingDate)}</p>
+                <p class="text-xs text-blue-700">${dayName}</p>
+              </div>
+              <div>
+                <p class="text-xs text-blue-600 font-semibold">🕐 الحصة</p>
+                <p class="text-sm text-gray-800 font-bold">الحصة ${periodNames[booking.period]}</p>
+              </div>
+              <div>
+                <p class="text-xs text-blue-600 font-semibold">👩‍🏫 المعلمة</p>
+                <p class="text-sm text-gray-800">${booking.teacher_name}</p>
+              </div>
+              <div>
+                <p class="text-xs text-blue-600 font-semibold">📚 المادة</p>
+                <p class="text-sm text-gray-800">${booking.subject}</p>
+              </div>
+              <div class="col-span-2">
+                <p class="text-xs text-blue-600 font-semibold">📖 الدرس</p>
+                <p class="text-sm text-gray-800">${booking.lesson_title}</p>
+              </div>
+              <div>
+                <p class="text-xs text-blue-600 font-semibold">🎓 الصف</p>
+                <p class="text-sm text-gray-800">${booking.grade} / ${booking.section}</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSchedule() {
+      const tbody = document.getElementById('scheduleBody');
+      tbody.innerHTML = '';
+
+      for (let p = 0; p < 7; p++) {
+        const row = document.createElement('tr');
+        
+        const periodCell = document.createElement('td');
+        periodCell.className = 'p-3 period-header font-bold text-center';
+        periodCell.textContent = `الحصة ${periodNames[p]}`;
+        row.appendChild(periodCell);
+
+        for (let d = 0; d < 5; d++) {
+          const dayDate = new Date(currentWeekStart);
+          dayDate.setDate(dayDate.getDate() + d);
+          const dateKey = getDateKey(dayDate);
+          
+          const cell = document.createElement('td');
+          cell.className = 'p-2 border border-[#2d4a6f]';
+          
+          const booking = getBookingForSlot(dateKey, d, p);
+          
+          const cellContent = document.createElement('div');
+          cellContent.className = 'period-cell p-3 rounded-lg text-center min-h-[60px] flex flex-col justify-center';
+          
+          if (booking) {
+            cellContent.classList.add('booked');
+            cellContent.innerHTML = `
+              <span class="text-xs font-bold">محجوز</span>
+              <span class="text-xs mt-1">${booking.teacher_name}</span>
+            `;
+            cellContent.onclick = () => viewBooking(booking);
+          } else {
+            cellContent.classList.add('available');
+            cellContent.innerHTML = `
+              <span class="text-sm text-white font-bold">متاح</span>
+              <span class="text-xs text-white">اضغط للحجز</span>
+            `;
+            cellContent.onclick = () => openBookingModal(dateKey, d, p, dayDate);
+          }
+          
+          cell.appendChild(cellContent);
+          row.appendChild(cell);
+        }
+        
+        tbody.appendChild(row);
+      }
+    }
+
+    function openBookingModal(dateKey, dayIndex, period, dayDate) {
+      selectedSlot = { dateKey, dayIndex, period };
+      document.getElementById('selectedDay').textContent = `${dayNames[dayIndex]} - ${formatDate(dayDate)}`;
+      document.getElementById('selectedPeriod').textContent = `الحصة ${periodNames[period]}`;
+      document.getElementById('bookingForm').reset();
+      document.getElementById('bookingModal').classList.remove('hidden');
+    }
+
+    function viewBooking(booking) {
+      currentViewingBooking = booking;
+      const details = document.getElementById('bookingDetails');
+      const bookingDate = new Date(booking.date);
+      const formattedDate = formatDate(bookingDate);
+      
+      details.innerHTML = `
+        <div class="space-y-4">
+          <div class="p-4 rounded-lg bg-white border-l-4 border-blue-600">
+            <p class="text-blue-900 font-bold mb-3 text-center text-lg">📅 التاريخ والوقت</p>
+            <div class="space-y-2 text-sm">
+              <p><span class="text-blue-700 font-semibold">التاريخ:</span> <span class="text-gray-800">${formattedDate}</span></p>
+              <p><span class="text-blue-700 font-semibold">اليوم:</span> <span class="text-gray-800">${dayNames[booking.day_index]}</span></p>
+              <p><span class="text-blue-700 font-semibold">الحصة:</span> <span class="text-gray-800">الحصة ${periodNames[booking.period]}</span></p>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-lg bg-white border-l-4 border-blue-600">
+            <p class="text-blue-900 font-bold mb-3 text-center text-lg">👩‍🏫 بيانات المعلمة</p>
+            <div class="space-y-2 text-sm">
+              <p><span class="text-blue-700 font-semibold">اسم المعلمة:</span> <span class="text-gray-800">${booking.teacher_name}</span></p>
+              <p><span class="text-blue-700 font-semibold">المادة/التخصص:</span> <span class="text-gray-800">${booking.subject}</span></p>
+              <p><span class="text-blue-700 font-semibold">عنوان الدرس:</span> <span class="text-gray-800">${booking.lesson_title}</span></p>
+            </div>
+          </div>
+          
+          <div class="p-4 rounded-lg bg-white border-l-4 border-blue-600">
+            <p class="text-blue-900 font-bold mb-3 text-center text-lg">🎓 الصف والشعبة</p>
+            <div class="space-y-2 text-sm">
+              <p><span class="text-blue-700 font-semibold">الصف:</span> <span class="text-gray-800">${booking.grade}</span></p>
+              <p><span class="text-blue-700 font-semibold">الشعبة:</span> <span class="text-gray-800">${booking.section}</span></p>
+            </div>
+          </div>
+          
+          ${booking.requirements ? `<div class="p-4 rounded-lg bg-white border-l-4 border-blue-600">
+            <p class="text-blue-900 font-bold mb-3 text-center text-lg">📝 الاحتياجات</p>
+            <p class="text-gray-800 text-sm">${booking.requirements}</p>
+          </div>` : ''}
+        </div>
+      `;
+      document.getElementById('deleteBookingBtn').classList.remove('hidden');
+      document.getElementById('confirmDelete').classList.add('hidden');
+      document.getElementById('viewModal').classList.remove('hidden');
+    }
+
+    async function deleteBooking(booking) {
+      document.getElementById('confirmDeleteBtn').disabled = true;
+      document.getElementById('confirmDeleteBtn').textContent = 'جاري الإلغاء...';
+      
+      const result = await window.dataSdk.delete(booking);
+      
+      document.getElementById('confirmDeleteBtn').disabled = false;
+      document.getElementById('confirmDeleteBtn').textContent = 'نعم، إلغاء';
+      
+      if (result.isOk) {
+        showToast('تم إلغاء الحجز بنجاح');
+        document.getElementById('viewModal').classList.add('hidden');
+        currentViewingBooking = null;
+      } else {
+        showToast('حدث خطأ أثناء إلغاء الحجز', 'error');
+      }
+    }
+
+    document.getElementById('deleteBookingBtn').onclick = () => {
+      document.getElementById('deleteBookingBtn').classList.add('hidden');
+      document.getElementById('confirmDelete').classList.remove('hidden');
+    };
+
+    document.getElementById('confirmDeleteBtn').onclick = () => {
+      if (currentViewingBooking) {
+        deleteBooking(currentViewingBooking);
+      }
+    };
+
+    document.getElementById('cancelDeleteBtn').onclick = () => {
+      document.getElementById('deleteBookingBtn').classList.remove('hidden');
+      document.getElementById('confirmDelete').classList.add('hidden');
+    };
+
+    document.getElementById('bookingForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      if (bookings.length >= 999) {
+        showToast('تم الوصول للحد الأقصى من الحجوزات (999)', 'error');
+        return;
+      }
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جاري الحجز...';
+      
+      const newBooking = {
+        date: selectedSlot.dateKey,
+        day_index: selectedSlot.dayIndex,
+        period: selectedSlot.period,
+        teacher_name: document.getElementById('teacherName').value,
+        subject: document.getElementById('subject').value,
+        lesson_title: document.getElementById('lessonTitle').value,
+        grade: document.getElementById('grade').value,
+        section: document.getElementById('section').value,
+        requirements: document.getElementById('requirements').value || '',
+        created_at: new Date().toISOString()
+      };
+      
+      const result = await window.dataSdk.create(newBooking);
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'تأكيد الحجز';
+      
+      if (result.isOk) {
+        showToast('تم الحجز بنجاح!');
+        document.getElementById('bookingModal').classList.add('hidden');
+      } else {
+        showToast('حدث خطأ أثناء الحجز', 'error');
+      }
+    };
+
+    document.getElementById('closeModal').onclick = () => {
+      document.getElementById('bookingModal').classList.add('hidden');
+    };
+
+    document.getElementById('closeViewModal').onclick = () => {
+      document.getElementById('viewModal').classList.add('hidden');
+    };
+
+    document.getElementById('prevWeek').onclick = () => {
+      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+      updateWeekDisplay();
+      renderSchedule();
+      renderBookingsSummary();
+    };
+
+    document.getElementById('nextWeek').onclick = () => {
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      updateWeekDisplay();
+      renderSchedule();
+      renderBookingsSummary();
+    };
+
+    document.getElementById('todayBtn').onclick = () => {
+      currentWeekStart = getWeekStart(new Date());
+      updateWeekDisplay();
+      renderSchedule();
+      renderBookingsSummary();
+    };
+
+    document.getElementById('bookingModal').onclick = (e) => {
+      if (e.target.id === 'bookingModal') {
+        document.getElementById('bookingModal').classList.add('hidden');
+      }
+    };
+
+    document.getElementById('viewModal').onclick = (e) => {
+      if (e.target.id === 'viewModal') {
+        document.getElementById('viewModal').classList.add('hidden');
+      }
+    };
+
+    const dataHandler = {
+      onDataChanged(data) {
+        bookings = data;
+        renderSchedule();
+        renderBookingsSummary();
+      }
+    };
+
+    async function onConfigChange(config) {
+      document.getElementById('mainTitle').textContent = config.main_title || defaultConfig.main_title;
+      document.getElementById('schoolName').textContent = config.school_name || defaultConfig.school_name;
+      document.getElementById('specialistName').textContent = config.specialist_name || defaultConfig.specialist_name;
+    }
+
+    // Sample bookings from version 22
+    const sampleBookings = [
+      {
+        date: '2024-01-07',
+        day_index: 0,
+        period: 0,
+        teacher_name: 'أ. فاطمة الكندية',
+        subject: 'لغة عربية',
+        lesson_title: 'الفعل والفاعل',
+        grade: 'السابع',
+        section: '1',
+        requirements: 'كتب مرجعية وأجهزة عرض',
+        created_at: '2024-01-06T10:30:00.000Z'
+      },
+      {
+        date: '2024-01-07',
+        day_index: 0,
+        period: 1,
+        teacher_name: 'أ. سارة المعمرية',
+        subject: 'رياضيات',
+        lesson_title: 'المعادلات الخطية',
+        grade: 'الثامن',
+        section: '2',
+        requirements: 'آلات حاسبة علمية',
+        created_at: '2024-01-06T11:00:00.000Z'
+      },
+      {
+        date: '2024-01-08',
+        day_index: 1,
+        period: 0,
+        teacher_name: 'أ. مريم الشامسية',
+        subject: 'علوم',
+        lesson_title: 'الدورة الكهربائية',
+        grade: 'التاسع',
+        section: '3',
+        requirements: 'مواد تجريبية وأجهزة قياس',
+        created_at: '2024-01-06T12:00:00.000Z'
+      },
+      {
+        date: '2024-01-08',
+        day_index: 1,
+        period: 2,
+        teacher_name: 'أ. هند الهاشمية',
+        subject: 'دراسات اجتماعية',
+        lesson_title: 'جغرافية عمان',
+        grade: 'السادس',
+        section: '1',
+        requirements: 'خرائط وألاس عالمي',
+        created_at: '2024-01-06T13:00:00.000Z'
+      },
+      {
+        date: '2024-01-09',
+        day_index: 2,
+        period: 1,
+        teacher_name: 'أ. نورا البلوشية',
+        subject: 'لغة إنجليزية',
+        lesson_title: 'Present Perfect Tense',
+        grade: 'العاشر',
+        section: '2',
+        requirements: 'أجهزة صوتية وتسجيلات',
+        created_at: '2024-01-06T14:00:00.000Z'
+      },
+      {
+        date: '2024-01-09',
+        day_index: 2,
+        period: 3,
+        teacher_name: 'أ. ليلى الكيومية',
+        subject: 'تربية إسلامية',
+        lesson_title: 'أركان الإسلام',
+        grade: 'السابع',
+        section: '3',
+        requirements: 'مصاحف وكتب تفسير',
+        created_at: '2024-01-06T15:00:00.000Z'
+      },
+      {
+        date: '2024-01-10',
+        day_index: 3,
+        period: 0,
+        teacher_name: 'أ. أمل الخاروفية',
+        subject: 'فنون تشكيلية',
+        lesson_title: 'الرسم بالألوان المائية',
+        grade: 'الثامن',
+        section: '1',
+        requirements: 'أدوات فنية وألوان',
+        created_at: '2024-01-06T16:00:00.000Z'
+      },
+      {
+        date: '2024-01-10',
+        day_index: 3,
+        period: 4,
+        teacher_name: 'أ. زهراء الراشدية',
+        subject: 'تقنية معلومات',
+        lesson_title: 'البرمجة الأساسية',
+        grade: 'التاسع',
+        section: '2',
+        requirements: 'أجهزة حاسوب وبرامج',
+        created_at: '2024-01-06T17:00:00.000Z'
+      },
+      {
+        date: '2024-01-11',
+        day_index: 4,
+        period: 1,
+        teacher_name: 'أ. منيرة الزدجالية',
+        subject: 'مهارات حياتية',
+        lesson_title: 'مهارات التواصل الفعال',
+        grade: 'السادس',
+        section: '2',
+        requirements: 'قاعات ومعدات عرض',
+        created_at: '2024-01-06T18:00:00.000Z'
+      },
+      {
+        date: '2024-01-11',
+        day_index: 4,
+        period: 5,
+        teacher_name: 'أ. خديجة العنبرية',
+        subject: 'رياضة مدرسية',
+        lesson_title: 'كرة السلة - المبادئ الأساسية',
+        grade: 'العاشر',
+        section: '1',
+        requirements: 'ملاعب وكرات رياضية',
+        created_at: '2024-01-06T19:00:00.000Z'
+      }
+    ];
+
+    async function init() {
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['main_title', config.main_title || defaultConfig.main_title],
+            ['school_name', config.school_name || defaultConfig.school_name],
+            ['specialist_name', config.specialist_name || defaultConfig.specialist_name]
+          ])
+        });
+      }
+
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init(dataHandler);
+        if (!result.isOk) {
+          console.error('Failed to initialize data SDK');
+        }
+      }
+
+      updateWeekDisplay();
+      renderSchedule();
+      renderBookingsSummary();
+    }
+
+    init();
+  </script>
+  </div>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e4c6b651190f9ec',t:'MTc3NDkyOTMzNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
